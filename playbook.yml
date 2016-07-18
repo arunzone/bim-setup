@@ -5,13 +5,10 @@
     protoc_archive: "protobuf-2.6.1.tar.gz"
 
   tasks:
-    - name: Download Protoc
-      get_url: url={{download_url}} dest={{protoc_archive}}
+    - name: Download & unpack protoc
+      unarchive: src={{download_url}} dest=~/ copy=no
 
-    - name: Unpack protoc
-      command: tar zxf /home/vagrant/{{protoc_archive}} creates=/home/vagrant/protobuf-2.6.1
-
-    - name: install all dependences of protoc
+    - name: Install all dependences of protoc
       become: yes
       become_method: sudo
       apt: pkg={{item}} update_cache=yes cache_valid_time=3600
@@ -24,35 +21,32 @@
       alternatives: name=cc link=/usr/bin/cc path=/usr/bin/gcc-4.8
       become: yes
       become_method: sudo
-      tags: general
 
     - name: General | update-alternatives for c++
       alternatives: name=c++ link=/usr/bin/c++ path=/usr/bin/g++-4.8
       become: yes
       become_method: sudo
-      tags: general
 
     - name: General | update-alternatives for cpp
       alternatives: name=cpp link=/usr/bin/cpp path=/usr/bin/g++-4.8
       become: yes
       become_method: sudo
-      tags: general
 
-    - name: configure protoc
+    - name: Configure protoc
       shell: ./configure chdir=/home/vagrant/protobuf-2.6.1
 
-    - name: compile (make) protoc
+    - name: Compile (make) protoc
       command: make chdir=/home/vagrant/protobuf-2.6.1
 
-    - name: check the compilation of proto
+    - name: Check the compilation of protoc
       shell: make check chdir=/home/vagrant/protobuf-2.6.1
 
-    - name: install protoc
+    - name: Install protoc
       become: yes
       become_method: sudo
       command: make install chdir=/home/vagrant/protobuf-2.6.1
 
-    - name: updating ld.so.cache
+    - name: Updating ld.so.cache
       become: yes
       become_method: sudo
       command: ldconfig
@@ -97,7 +91,7 @@
       git: repo=https://github.com/creationix/nvm.git dest=~/.nvm
 
     - name: prepare nvm
-      shell: cd ~/.nvm && git checkout `git describe --abbrev=0 --tags` 
+      shell: cd ~/.nvm && git checkout `git describe --abbrev=0 --tags`
 
     - name: install nvm
       shell: . ~/.nvm/nvm.sh
