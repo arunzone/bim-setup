@@ -1,0 +1,109 @@
+---
+- hosts: all
+  vars:
+    download_url: https://github.com/google/protobuf/releases/download/v2.6.1/protobuf-2.6.1.tar.gz
+    protoc_archive: "protobuf-2.6.1.tar.gz"
+
+  tasks:
+    - name: Download Protoc
+      get_url: url={{download_url}} dest={{protoc_archive}}
+
+    - name: Unpack protoc
+      command: tar zxf /home/vagrant/{{protoc_archive}} creates=/home/vagrant/protobuf-2.6.1
+
+    - name: install all dependences of protoc
+      become: yes
+      become_method: sudo
+      apt: pkg={{item}} update_cache=yes cache_valid_time=3600
+      with_items:
+        - make
+        - gcc
+        - g++
+
+    - name: General | update-alternatives for cc
+      alternatives: name=cc link=/usr/bin/cc path=/usr/bin/gcc-4.8
+      become: yes
+      become_method: sudo
+      tags: general
+
+    - name: General | update-alternatives for c++
+      alternatives: name=c++ link=/usr/bin/c++ path=/usr/bin/g++-4.8
+      become: yes
+      become_method: sudo
+      tags: general
+
+    - name: General | update-alternatives for cpp
+      alternatives: name=cpp link=/usr/bin/cpp path=/usr/bin/g++-4.8
+      become: yes
+      become_method: sudo
+      tags: general
+
+    - name: configure protoc
+      shell: ./configure chdir=/home/vagrant/protobuf-2.6.1
+
+    - name: compile (make) protoc
+      command: make chdir=/home/vagrant/protobuf-2.6.1
+
+    - name: check the compilation of proto
+      shell: make check chdir=/home/vagrant/protobuf-2.6.1
+
+    - name: install protoc
+      become: yes
+      become_method: sudo
+      command: make install chdir=/home/vagrant/protobuf-2.6.1
+
+    - name: updating ld.so.cache
+      become: yes
+      become_method: sudo
+      command: ldconfig
+
+    - name: Install add-apt-repostory
+      become: yes
+      become_method: sudo
+      apt: name=software-properties-common state=latest
+
+    - name: Add Oracle Java Repository
+      become: yes
+      become_method: sudo
+      apt_repository: repo='ppa:webupd8team/java' update_cache=yes
+
+    - name: Accept Java 8 License
+      become: yes
+      become_method: sudo
+      debconf: name='oracle-java8-installer' question='shared/accepted-oracle-license-v1-1' value='true' vtype='select'
+
+    - name: Install Oracle Java 8
+      become: yes
+      become_method: sudo
+      apt: name={{item}} state=latest
+      with_items:
+        - oracle-java8-installer
+        - ca-certificates
+        - oracle-java8-set-default
+
+    - name: install maven (and other packages if needed)
+      become: yes
+      become_method: sudo
+      apt: pkg={{ item }} state=latest update_cache=yes cache_valid_time=3600
+      with_items:
+        - maven
+        - curl
+        - git
+
+    - name: create nvm directory
+      file: state=directory path=.nvm
+
+    - name: clone nvm
+      git: repo=https://github.com/creationix/nvm.git dest=~/.nvm
+
+    - name: prepare nvm
+      shell: cd ~/.nvm && git checkout `git describe --abbrev=0 --tags` 
+
+    - name: install nvm
+      shell: . ~/.nvm/nvm.sh
+
+    - name: export nvm
+      lineinfile: dest=~/.bashrc line='export NVM_DIR="$HOME/.nvm"'
+
+    - name: activate nvm
+      lineinfile: dest=~/.bashrc line='[ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"'
