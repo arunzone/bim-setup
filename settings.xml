@@ -1,0 +1,49 @@
+<?xml version="1.0"?>
+<settings xmlns="http://maven.apache.org/POM/4.0.0"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/settings-1.0.0.xsd">
+  <pluginGroups>
+      <pluginGroup>com.atlassian.maven.plugins</pluginGroup>
+  </pluginGroups>
+ 
+  <mirrors>
+   <mirror>
+     <!--This is used to direct the public snapshots repo in the
+         profile below over to a different nexus group -->
+     <id>nexus-public-snapshots</id>
+     <mirrorOf>public-snapshots</mirrorOf>
+     <url>https://repo.aconex.com/content/groups/public-snapshots</url>
+   </mirror>
+    <mirror>
+      <id>nexus-public</id>
+      <name>Nexus Public Mirror</name>
+      <url>https://repo.aconex.com/content/groups/public</url>
+      <mirrorOf>*</mirrorOf>
+    </mirror>
+  </mirrors>
+ 
+  <servers>
+    <!-- Nexus details for deployment-->
+    <server>
+      <id>release</id>
+      <username>deployment</username>
+      <password>admin456</password>
+    </server>
+    <server>
+      <id>snapshots</id>
+      <username>deployment</username>
+      <password>admin456</password>
+    </server>
+    <!-- Nexus details for accessing mirror which just happens to be the same account -->
+    <server>
+      <id>nexus-public</id>
+      <username>deployment</username>
+      <password>admin456</password>
+    </server>
+    <server>
+      <id>nexus-public-snapshots</id>
+      <username>deployment</username>
+      <password>admin456</password>
+    </server>
+  </servers>
+</settings>
