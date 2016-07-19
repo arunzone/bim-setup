@@ -76,28 +76,36 @@
         - oracle-java8-set-default
 
     - name: install maven (and other packages if needed)
+      apt: pkg={{ item }} state=latest update_cache=yes cache_valid_time=3600
       become: yes
       become_method: sudo
-      apt: pkg={{ item }} state=latest update_cache=yes cache_valid_time=3600
       with_items:
         - maven
         - curl
         - git
 
-    - name: create nvm directory
-      file: state=directory path=.nvm
+    - name: export M2_HOME
+      lineinfile: dest=~/.bashrc state=present regexp='^M2_HOME.*' line='export M2_HOME="/usr/share/maven"' insertbefore='^PATH.*'
 
-    - name: clone nvm
-      git: repo=https://github.com/creationix/nvm.git dest=~/.nvm
+    - name: export MAVEN_HOME
+      lineinfile: dest=~/.bashrc state=present regexp='^MAVEN_HOME.*' line='export MAVEN_HOME="/usr/share/maven"' insertbefore='^PATH.*'
 
-    - name: prepare nvm
-      shell: cd ~/.nvm && git checkout `git describe --abbrev=0 --tags`
+    - name: Install nvm
+      shell: >
+        curl https://raw.githubusercontent.com/creationix/nvm/v0.7.0/install.sh | sh
+        creates=/home/{{ ansible_user_id }}/.nvm/nvm.sh
 
-    - name: install nvm
-      shell: . ~/.nvm/nvm.sh
+    - name: Install node and set version
+      shell: >
+        /bin/bash -c "source ~/.nvm/nvm.sh && nvm install 5.7.1 && nvm alias default 5.7.1"
+        creates=/home/{{ ansible_user_id }}/.nvm/alias
 
-    - name: export nvm
-      lineinfile: dest=~/.bashrc line='export NVM_DIR="$HOME/.nvm"'
+    - name: install npm
+      become: yes
+      become_method: sudo
+      apt:  pkg=npm state=present
 
-    - name: activate nvm
-      lineinfile: dest=~/.bashrc line='[ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"'
+    - name: Install Grunt CLI
+      become: yes
+      become_method: sudo
+      npm: name=grunt-cli global=yes state=present
