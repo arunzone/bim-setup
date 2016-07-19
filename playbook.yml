@@ -5,6 +5,26 @@
     protoc_archive: "protobuf-2.6.1.tar.gz"
 
   tasks:
+    - name: Increase no of file descriptors (soft)
+      become: yes
+      become_method: sudo
+      lineinfile: dest=/etc/security/limits.conf state=present line="* soft nofile 16374"
+
+    - name: Increase no of file descriptors (hard)
+      become: yes
+      become_method: sudo
+      lineinfile: dest=/etc/security/limits.conf state=present line="* hard nofile 32748"
+
+    - name: Increase the number of inotify user watch limit
+      become: yes
+      become_method: sudo
+      lineinfile: dest=/etc/sysctl.conf state=present line="fs.inotify.max_user_watches = 524288"
+
+    - name: Effect file descriptors
+      become: yes
+      become_method: sudo
+      command: sysctl -p
+
     - name: Download & unpack protoc
       unarchive: src={{download_url}} dest=~/ copy=no
 
@@ -75,20 +95,54 @@
         - ca-certificates
         - oracle-java8-set-default
 
-    - name: install maven (and other packages if needed)
+    - name: Create /opt directory
+      file: path=/opt state=directory
+
+    - name: Download Maven3
+      become: yes
+      become_method: sudo
+
+      get_url: dest=/opt/maven3.tar.gz url=http://apache.proserve.nl/maven/maven-3/3.2.5/binaries/apache-maven-3.2.5-bin.tar.gz
+
+    - name: Unpack Maven3
+      become: yes
+      become_method: sudo
+      action: command creates=/opt/maven chdir=/opt tar zxvf /opt/maven3.tar.gz
+
+    - name: Create Maven3 directory link
+      become: yes
+      become_method: sudo
+      file: path=/opt/maven src=/opt/apache-maven-3.2.5 state=link
+
+    - name: Set mvn link
+      become: yes
+      become_method: sudo
+      action: command update-alternatives --install /usr/bin/mvn mvn /opt/maven/bin/mvn 1
+
+    - name: install packages
       apt: pkg={{ item }} state=latest update_cache=yes cache_valid_time=3600
       become: yes
       become_method: sudo
       with_items:
-        - maven
         - curl
         - git
+        - apache2
+        - xfce4
+        - virtualbox-guest-dkms
+        - virtualbox-guest-utils
+        - virtualbox-guest-x11
 
     - name: export M2_HOME
-      lineinfile: dest=~/.bashrc state=present regexp='^M2_HOME.*' line='export M2_HOME="/usr/share/maven"' insertbefore='^PATH.*'
+      lineinfile: dest=~/.bashrc state=present regexp='^M2_HOME.*' line='export M2_HOME="/opt/apache-maven-3.2.5"' insertbefore='^PATH.*'
 
     - name: export MAVEN_HOME
-      lineinfile: dest=~/.bashrc state=present regexp='^MAVEN_HOME.*' line='export MAVEN_HOME="/usr/share/maven"' insertbefore='^PATH.*'
+      lineinfile: dest=~/.bashrc state=present regexp='^MAVEN_HOME.*' line='export MAVEN_HOME="/opt/apache-maven-3.2.5"' insertbefore='^PATH.*'
+
+    - name: Setup maven repository
+      file: path=~/.m2 state=directory
+
+    - name: Configure maven repository
+      get_url: url=https://raw.githubusercontent.com/arunzone/bim-setup/master/settings.xml dest=~/.m2/settings.xml
 
     - name: Install nvm
       shell: >
@@ -109,3 +163,26 @@
       become: yes
       become_method: sudo
       npm: name=grunt-cli global=yes state=present
+
+    - name: Configure apache proxy
+      become: yes
+      become_method: sudo
+      command: a2enmod proxy_http
+
+    - name: Configure apache ssl
+      become: yes
+      become_method: sudo
+      command: a2enmod ssl
+
+    - name: Configure apache
+      become: yes
+      become_method: sudo
+      get_url: url=https://raw.githubusercontent.com/arunzone/bim-setup/master/rp.conf dest=/etc/apache2/conf-enabled/rp.conf
+
+    - name: Restart Apache
+      service: name=apache2 state=restarted
+
+    - name: Enable gui
+      become: yes
+      become_method: sudo
+      lineinfile: dest=/etc/X11/Xwrapper.config regexp="^allowed_users=" line="allowed_users=anybody"
