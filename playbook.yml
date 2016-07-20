@@ -131,6 +131,8 @@
         - virtualbox-guest-dkms
         - virtualbox-guest-utils
         - virtualbox-guest-x11
+        - firefox
+        - postgresql
 
     - name: export M2_HOME
       lineinfile: dest=~/.bashrc state=present regexp='^M2_HOME.*' line='export M2_HOME="/opt/apache-maven-3.2.5"' insertbefore='^PATH.*'
@@ -186,3 +188,7 @@
       become: yes
       become_method: sudo
       lineinfile: dest=/etc/X11/Xwrapper.config regexp="^allowed_users=" line="allowed_users=anybody"
+
+  handlers:
+    - name: Restart postgresql
+      service: name=postgresql state=restarted
